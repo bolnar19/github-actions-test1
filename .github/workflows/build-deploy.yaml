@@ -1,0 +1,29 @@
+name: My App CI/CD
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build:
+    uses: bolnar19/workflows-reusable/.github/workflows/build-docker.yaml@main # Aquí el 'main' es la rama del shared-workflows
+    with:
+      image-name: python-app
+      dockerfile-path: ./Dockerfile
+      # El username ya no es secreto
+      registry-username: andresbolivar19
+    secrets:
+      # Solo el token es secreto
+      REGISTRY_TOKEN: ${{ secrets.DOCKER_TOKEN }}
+
+  deploy:
+    needs: build # Depende del job de build
+    uses: bolnar19/workflows-reusable/.github/workflows/deploy-k8s.yaml@main
+    with:
+      deployment-name: python-app
+      namespace: default
+      image: ${{ needs.build.outputs.image-tag }} # El workflow reutilizable debe exponer este output
+    secrets:
+      # Aquí pasas los secretos que el workflow reutilizable de deploy pueda necesitar (ej. KUBECONFIG)
+      KUBECONFIG: ${{ secrets.KUBECONFIG }}
